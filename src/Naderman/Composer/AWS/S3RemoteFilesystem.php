@@ -31,7 +31,7 @@ class S3RemoteFilesystem extends RemoteFilesystem
     /**
      * {@inheritDoc}
      */
-    public function __construct(IOInterface $io, Config $config = null, array $options = array(), AwsClient $awsClient)
+    public function __construct(IOInterface $io, Config $config = null, array $options, AwsClient $awsClient)
     {
         parent::__construct($io, $config, $options);
         $this->awsClient = $awsClient;
@@ -40,7 +40,7 @@ class S3RemoteFilesystem extends RemoteFilesystem
     /**
      * {@inheritDoc}
      */
-    public function getContents($originUrl, $fileUrl, $progress = true, $options = array())
+    public function getContents($originUrl, $fileUrl, $progress = true, $options = [])
     {
         return $this->awsClient->download($fileUrl, $progress);
     }
@@ -48,7 +48,7 @@ class S3RemoteFilesystem extends RemoteFilesystem
     /**
      * {@inheritDoc}
      */
-    public function copy($originUrl, $fileUrl, $fileName, $progress = true, $options = array())
+    public function copy($originUrl, $fileUrl, $fileName, $progress = true, $options = [])
     {
         $this->awsClient->download($fileUrl, $progress, $fileName);
     }

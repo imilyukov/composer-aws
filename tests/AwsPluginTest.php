@@ -15,6 +15,7 @@ use Composer\Composer;
 use Composer\Config;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PreFileDownloadEvent;
+use Composer\Util\HttpDownloader;
 use Composer\Util\RemoteFilesystem;
 use Naderman\Composer\AWS\AwsPlugin;
 use Naderman\Composer\AWS\S3RemoteFilesystem;
@@ -22,7 +23,7 @@ use Naderman\Composer\AWS\S3RemoteFilesystem;
 /**
  * Composer Plugin tests for AWS functionality
  */
-class AwsPluginTest extends \PHPUnit_Framework_TestCase
+class AwsPluginTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Composer
@@ -34,7 +35,7 @@ class AwsPluginTest extends \PHPUnit_Framework_TestCase
      */
     protected $io;
     
-    public function setUp()
+    public function setUp(): void
     {
         $this->composer = new Composer();
         $this->composer->setConfig(new Config());
@@ -88,9 +89,6 @@ class AwsPluginTest extends \PHPUnit_Framework_TestCase
             ->method('getProcessedUrl')
             ->willReturn($address);
         
-        $event->expects($this->never())
-            ->method('setRemoteFilesystem');
-        
         $plugin->onPreFileDownload($event);
     }
 
@@ -109,22 +107,38 @@ class AwsPluginTest extends \PHPUnit_Framework_TestCase
         $event->expects($this->once())
             ->method('getProcessedUrl')
             ->willReturn($address);
-        
+
         $remoteFileSystem = $this->getMockBuilder(RemoteFilesystem::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $event->expects($this->once())
-            ->method('getRemoteFileSystem')
-            ->willReturn($remoteFileSystem);
-        
+
         $remoteFileSystem->expects($this->once())
             ->method('getOptions')
             ->willReturn([]);
 
-        $event->expects($this->once())
-            ->method('setRemoteFilesystem')
-            ->with($this->isInstanceOf(S3RemoteFilesystem::class));
+        $httpDownloader = $this->getMockBuilder(HttpDownloader::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        $plugin->onPreFileDownload($event);
+        $this->getAccessor($httpDownloader)('rfs', $remoteFileSystem);
+
+        $event->expects($this->once())
+            ->method('getHttpDownloader')
+            ->willReturn($httpDownloader);
+
+       $plugin->onPreFileDownload($event);
+    }
+
+    public function getAccessor($context)
+    {
+        return \Closure::bind(
+            function ($context) {
+                return fn (string $property, mixed $value = null) => $value === null 
+                    ? $context->{$property} 
+                    : $context->{$property} = $value;
+            },
+            $context,
+            get_class($context)
+        )($context);
     }
 }

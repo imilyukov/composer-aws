@@ -131,11 +131,11 @@ class AwsClient
             $msg = "Please add key/secret or a profile name into config.json or set up an IAM profile for your EC2 instance.";
             throw new TransportException($msg, 403, $e);
         } catch(S3Exception $e) {
-            throw new TransportException("Connection to Amazon S3 failed.", null, $e);
+            throw new TransportException("Connection to Amazon S3 failed.", 500, $e);
         } catch (TransportException $e) {
             throw $e; // just re-throw
         } catch (\Exception $e) {
-            throw new TransportException("Problem?", null, $e);
+            throw new TransportException("Problem?", 500, $e);
         }
 
         return $this;

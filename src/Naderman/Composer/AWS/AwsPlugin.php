@@ -18,6 +18,7 @@ use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PluginEvents;
 use Composer\Plugin\PreFileDownloadEvent;
 use Composer\Util\Filesystem;
+use Composer\Util\HttpDownloader;
 use Composer\Util\RemoteFilesystem;
 
 /**
@@ -52,6 +53,30 @@ class AwsPlugin implements PluginInterface, EventSubscriberInterface
     {
         $this->composer = $composer;
         $this->io = $io;
+    }
+
+    /**
+     * Remove any hooks from Composer
+     *
+     * This will be called when a plugin is deactivated before being
+     * uninstalled, but also before it gets upgraded to a new version
+     * so the old one can be deactivated and the new one activated.
+     *
+     * @return void
+     */
+    public function deactivate(Composer $composer, IOInterface $io)
+    {
+    }
+
+    /**
+     * Prepare the plugin to be uninstalled
+     *
+     * This will be called after deactivate.
+     *
+     * @return void
+     */
+    public function uninstall(Composer $composer, IOInterface $io)
+    {
     }
 
     /**
@@ -109,15 +134,33 @@ class AwsPlugin implements PluginInterface, EventSubscriberInterface
     public function onPreFileDownload(PreFileDownloadEvent $event)
     {
         $protocol = parse_url($event->getProcessedUrl(), PHP_URL_SCHEME);
-
         if ($protocol === 's3') {
+            $httpDownloader = $event->getHttpDownloader();
+            $httpDownloaderAccessor = $this->getAccessor($httpDownloader);
+            /** @var RemoteFilesystem $remoteFilesystem */
+            $remoteFilesystem = $httpDownloaderAccessor('rfs');
+
             $s3RemoteFilesystem = new S3RemoteFilesystem(
                 $this->io,
                 $this->composer->getConfig(),
-                $event->getRemoteFilesystem()->getOptions(),
+                $remoteFilesystem->getOptions(),
                 $this->getClient()
             );
-            $event->setRemoteFilesystem($s3RemoteFilesystem);
+
+            $httpDownloaderAccessor('rfs', $s3RemoteFilesystem);
         }
+    }
+
+    public function getAccessor($context)
+    {
+        return \Closure::bind(
+            function ($context) {
+                return fn (string $property, mixed $value = null) => $value === null 
+                    ? $context->{$property} 
+                    : $context->{$property} = $value;
+            },
+            $context,
+            get_class($context)
+        )($context);
     }
 }

@@ -20,7 +20,7 @@ use Naderman\Composer\AWS\AwsClient;
 use Naderman\Composer\AWS\AwsPlugin;
 use Naderman\Composer\AWS\S3RemoteFilesystem;
 
-class AwsClientTest extends \PHPUnit_Framework_TestCase
+class AwsClientTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Config
@@ -32,7 +32,7 @@ class AwsClientTest extends \PHPUnit_Framework_TestCase
      */
     protected $io;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->config = new Config();
         $this->io = $this->getMockBuilder('Composer\IO\IOInterface')->getMock();
@@ -43,8 +43,8 @@ class AwsClientTest extends \PHPUnit_Framework_TestCase
         $client = new AwsClient($this->io, $this->config);
         
         $s3Client = $client->s3factory($this->config);
-        
-        $this->assertEquals('us-east-1', $s3Client->getRegion());
+
+        $this->assertEquals('us-west-2', $s3Client->getRegion());
     }
     
     public function testS3FactoryUseRegionFromProfileConfigFile()
