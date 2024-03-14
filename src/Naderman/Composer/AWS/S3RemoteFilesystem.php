@@ -15,6 +15,7 @@ use Composer\Composer;
 use Composer\Config;
 use Composer\IO\IOInterface;
 use Composer\Util\RemoteFilesystem;
+use Psr\Http\Message\StreamInterface;
 
 /**
  * Composer Plugin for AWS functionality
@@ -27,6 +28,8 @@ class S3RemoteFilesystem extends RemoteFilesystem
      * @var AwsClient
      */
     protected $awsClient;
+
+    protected array $lastMetadata = [];
 
     /**
      * {@inheritDoc}
@@ -42,7 +45,13 @@ class S3RemoteFilesystem extends RemoteFilesystem
      */
     public function getContents($originUrl, $fileUrl, $progress = true, $options = [])
     {
-        return $this->awsClient->download($fileUrl, $progress);
+        $result = $this->awsClient->download($fileUrl, $progress);
+
+        $this->lastMetadata = $result['@metadata'];
+        
+        $body = $result['Body'];
+
+        return $body instanceof StreamInterface ? $body->getContents() : $body;
     }
 
     /**
@@ -50,6 +59,22 @@ class S3RemoteFilesystem extends RemoteFilesystem
      */
     public function copy($originUrl, $fileUrl, $fileName, $progress = true, $options = [])
     {
-        $this->awsClient->download($fileUrl, $progress, $fileName);
+        $result = $this->awsClient->download($fileUrl, $progress, $fileName);
+
+        $this->lastMetadata = $result['@metadata'];
+    }
+
+    public function getLastHeaders()
+    {
+        return array_merge(
+            [
+                sprintf('HTTP %s', $this->lastMetadata['statusCode'])
+            ],
+            array_map(
+                fn ($header, $value) => sprintf('%s:%s', $header, $value),
+                array_keys($this->lastMetadata['headers'] ?? []),
+                $this->lastMetadata['headers'] ?? [],
+            ),
+        );
     }
 }

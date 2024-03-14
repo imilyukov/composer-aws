@@ -125,7 +125,7 @@ class AwsClient
                     throw new TransportException($errorMessage);
                 }
             } else {
-                return $result['Body'];
+                return $result;
             }
         } catch (CredentialsException $e) {
             $msg = "Please add key/secret or a profile name into config.json or set up an IAM profile for your EC2 instance.";
